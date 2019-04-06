@@ -16,7 +16,7 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.2 and 
 
 `go build proxy.go`
 
-## Running proxy server
+## Start proxy server
 
 `./proxy --cert="/path/to/CertName.crt" --key="/path/to/KeyName.key" --host="1.2.3.4:411" --hub="127.0.0.1:411"`
 
@@ -27,6 +27,8 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.2 and 
 `!set listen_ip 127.0.0.1`
 
 `!set tls_proxy_ip 1.2.3.4`
+
+Then start the hub as usual.
 
 ## Protocol specification
 
