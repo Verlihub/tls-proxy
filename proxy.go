@@ -27,18 +27,26 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	fHost = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
-	fWait = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
-	fHub  = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
-	fIP   = flag.Bool("ip", true, "Send client IP")
-	fCert = flag.String("cert", "hub.cert", "TLS .cert file")
-	fKey  = flag.String("key", "hub.key", "TLS .key file")
+	fHost    = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
+	fWait    = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
+	fHub     = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
+	fIP      = flag.Bool("ip", true, "Send client IP")
+	fCert    = flag.String("cert", "hub.cert", "TLS .cert file")
+	fKey     = flag.String("key", "hub.key", "TLS .key file")
+	fPProf   = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
+	fMetrics = flag.String("metrics", "localhost:2112", "Serve metrics on a given address (empty = disabled)")
 )
 
 func main() {
@@ -62,6 +70,23 @@ func run() error {
 		}
 	} else {
 		log.Println("no certs; TLS disabled")
+	}
+
+	if *fPProf != "" {
+		log.Println("enabling profiler on", *fPProf)
+		go func() {
+			if err := http.ListenAndServe(*fPProf, nil); err != nil {
+				log.Println("cannot enable profiler:", err)
+			}
+		}()
+	}
+	if *fMetrics != "" {
+		log.Println("serving metrics on", *fMetrics)
+		go func() {
+			if err := http.ListenAndServe(*fMetrics, promhttp.Handler()); err != nil {
+				log.Println("cannot serve metrics:", err)
+			}
+		}()
 	}
 
 	hosts := strings.Split(*fHost, ",")
@@ -100,11 +125,14 @@ func acceptOn(l net.Listener) {
 		c, err := l.Accept()
 		if err != nil {
 			log.Println(err)
+			cntConnError.Add(1)
 			continue
 		}
+		cntConnAccepted.Add(1)
 		go func() {
 			err := serve(c)
 			if err != nil && err != io.EOF {
+				cntConnError.Add(1)
 				log.Println(c.RemoteAddr(), err)
 			}
 		}()
@@ -116,7 +144,11 @@ type timeoutErr interface {
 }
 
 func serve(c net.Conn) error {
-	defer c.Close()
+	cntConnOpen.Add(1)
+	defer func() {
+		_ = c.Close()
+		cntConnOpen.Add(-1)
+	}()
 
 	addr := c.RemoteAddr().(*net.TCPAddr)
 	ip := addr.IP.String()
@@ -128,6 +160,9 @@ func serve(c net.Conn) error {
 
 	if tlsConfig == nil || *fWait <= 0 {
 		// no auto-detection
+		cntConnInsecure.Add(1)
+		cntConnOpenInsecure.Add(1)
+		defer cntConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
 
@@ -136,10 +171,14 @@ func serve(c net.Conn) error {
 		return err
 	}
 
+	start := time.Now()
 	n, err := c.Read(buf[i:])
 	_ = c.SetReadDeadline(time.Time{})
 	if e, ok := err.(timeoutErr); ok && e.Timeout() {
-		// has to be NMDC
+		// has to be plain NMDC
+		cntConnInsecure.Add(1)
+		cntConnOpenInsecure.Add(1)
+		defer cntConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
 	if err != nil {
@@ -158,8 +197,16 @@ func serve(c net.Conn) error {
 		if err != nil {
 			return err
 		}
+		dt := time.Since(start).Seconds()
+		cntConnTLS.Add(1)
+		cntConnOpenTLS.Add(1)
+		defer cntConnOpenTLS.Add(-1)
+		durConnTLSHandshake.Observe(dt)
 		return writeAndStream(buf, tc, i)
 	}
+	cntConnInsecure.Add(1)
+	cntConnOpenInsecure.Add(1)
+	defer cntConnOpenInsecure.Add(-1)
 	return writeAndStream(buf, c, i)
 }
 
@@ -195,19 +242,100 @@ func writeAndStream(p []byte, c io.ReadWriteCloser, i int) error {
 	return stream(c, h)
 }
 
-func stream(c1, c2 io.ReadWriteCloser) error {
+func stream(c, h io.ReadWriteCloser) error {
 	closeBoth := func() {
-		_ = c1.Close()
-		_ = c2.Close()
+		_ = c.Close()
+		_ = h.Close()
 	}
 	defer closeBoth()
 
 	go func() {
 		defer closeBoth()
-		_, _ = io.Copy(c2, c1)
+		_, _ = copyBuffer(h, c, cntConnRx)
 	}()
-	_, _ = io.Copy(c1, c2)
+	_, _ = copyBuffer(c, h, cntConnTx)
 	return nil
 }
+
+// copyBuffer was copied from io package and modified to add instrumentation.
+func copyBuffer(dst io.Writer, src io.Reader, cnt prometheus.Counter) (written int64, err error) {
+	size := 32 * 1024
+	if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
+		if l.N < 1 {
+			size = 1
+		} else {
+			size = int(l.N)
+		}
+	}
+	buf := make([]byte, size)
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			cnt.Add(float64(nw))
+			if nw > 0 {
+				written += int64(nw)
+			}
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
+			break
+		}
+	}
+	return written, err
+}
+
+var (
+	cntConnAccepted = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "dc_conn_accepted",
+		Help: "The total number of accepted connections",
+	})
+	cntConnError = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "dc_conn_error",
+		Help: "The total number of connections failed with an error",
+	})
+	cntConnOpen = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dc_conn_open",
+		Help: "The number of open connections",
+	})
+	cntConnInsecure = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "dc_conn_insecure",
+		Help: "The total number of insecure connections",
+	})
+	cntConnOpenInsecure = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dc_conn_insecure_open",
+		Help: "The number of open insecure connections",
+	})
+	cntConnTLS = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "dc_conn_tls",
+		Help: "The total number of TLS connections",
+	})
+	cntConnOpenTLS = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dc_conn_tls_open",
+		Help: "The number of open TLS connections",
+	})
+	durConnTLSHandshake = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "dc_conn_tls_handshake_sec",
+		Help: "Time spent on TLS handshake",
+	})
+	cntConnRx = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "dc_conn_rx_bytes",
+		Help: "Total bytes received from the client",
+	})
+	cntConnTx = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "dc_conn_tx_bytes",
+		Help: "Total bytes sent to the client",
+	})
+)
 
 // end of file
