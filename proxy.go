@@ -72,7 +72,8 @@ func run() error {
 	for {
 		c, err := l.Accept()
 		if err != nil {
-			return err
+			log.Println(err)
+			continue
 		}
 		go func() {
 			err := serve(c)
