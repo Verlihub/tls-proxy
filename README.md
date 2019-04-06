@@ -12,7 +12,7 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.2 and 
 
 ## Compile proxy server
 
-`git clone https://github.com/Verlihub/tls-proxy.git`
+`git clone https://github.com/verlihub/tls-proxy.git`
 
 `go build proxy.go`
 
@@ -32,9 +32,9 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.2 and 
 
 Following command is sent to the hub right after the connection is established:
 
-`$MyIP 1.2.3.4 P/S|`
+`$MyIP 2.3.4.5 P/S|`
 
-`1.2.3.4` is the real IP address of connected user. `P` stands for plain and `S` stands for secure connection mode.
+`2.3.4.5` is the real IP address of connected user. `P` stands for plain and `S` stands for secure connection mode.
 
 ## Important to know
 
