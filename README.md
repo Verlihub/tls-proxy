@@ -26,7 +26,7 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.2 and 
 
 `!set listen_ip 127.0.0.1`
 
-`!set tls_proxy_ip 1.2.3.4`
+`!set tls_proxy_ip 127.0.0.1`
 
 Then start the hub as usual.
 
