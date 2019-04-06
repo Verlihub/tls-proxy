@@ -27,11 +27,13 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
+	"sync"
 	"time"
 )
 
 var (
-	fHost = flag.String("host", ":411", "Host to listen on")
+	fHost = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
 	fWait = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
 	fHub  = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
 	fIP   = flag.Bool("ip", true, "Send client IP")
@@ -62,13 +64,38 @@ func run() error {
 		log.Println("no certs; TLS disabled")
 	}
 
-	l, err := net.Listen("tcp4", *fHost)
-	if err != nil {
-		return err
-	}
-	defer l.Close()
+	hosts := strings.Split(*fHost, ",")
 
-	log.Println("proxying", *fHost, "to", *fHub)
+	var lis []net.Listener
+	defer func() {
+		for _, l := range lis {
+			_ = l.Close()
+		}
+	}()
+
+	for _, host := range hosts {
+		l, err := net.Listen("tcp4", host)
+		if err != nil {
+			return err
+		}
+		lis = append(lis, l)
+	}
+
+	var wg sync.WaitGroup
+	for i, l := range lis {
+		wg.Add(1)
+		l := l
+		log.Println("proxying", hosts[i], "to", *fHub)
+		go func() {
+			defer wg.Done()
+			acceptOn(l)
+		}()
+	}
+	wg.Wait()
+	return nil
+}
+
+func acceptOn(l net.Listener) {
 	for {
 		c, err := l.Accept()
 		if err != nil {
