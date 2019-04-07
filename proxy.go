@@ -47,6 +47,7 @@ var (
 	fKey     = flag.String("key", "hub.key", "TLS .key file")
 	fPProf   = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
 	fMetrics = flag.String("metrics", "localhost:2112", "Serve metrics on a given address (empty = disabled)")
+	fBuf     = flag.Int("buf", 10, "Buffer size in KB")
 )
 
 func main() {
@@ -259,7 +260,7 @@ func stream(c, h io.ReadWriteCloser) error {
 
 // copyBuffer was copied from io package and modified to add instrumentation.
 func copyBuffer(dst io.Writer, src io.Reader, cnt prometheus.Counter) (written int64, err error) {
-	size := 32 * 1024
+	size := *fBuf * 1024
 	if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
 		if l.N < 1 {
 			size = 1
