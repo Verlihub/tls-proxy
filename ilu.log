@@ -1,4 +1,0 @@
-2019/04/06 21:09:07 using certs: /home/rolex/.certs/FearDC.crt /home/rolex/.certs/FearDC.key
-2019/04/06 21:09:07 listen tcp4 137.74.6.25:4011: bind: address already in use
-2019/04/06 21:10:50 using certs: /home/rolex/.certs/FearDC.crt /home/rolex/.certs/FearDC.key
-2019/04/06 21:10:50 proxying 137.74.6.25:4011 to 127.0.0.1:4011
