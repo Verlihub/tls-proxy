@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2019 Dexo
+	Copyright (C) 2019 Dexo, dexo at verlihub dot net
 	Copyright (C) 2019 Verlihub Team, info at verlihub dot net
 
 	This is free software; You can redistribute it
