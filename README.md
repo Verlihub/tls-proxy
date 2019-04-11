@@ -18,9 +18,17 @@ Else use:
 
 ## Compile proxy server
 
-`git clone https://github.com/verlihub/tls-proxy.git`
+```
+git clone https://github.com/verlihub/tls-proxy.git
+cd tls-proxy
+go build proxy.go
+```
 
-`go build proxy.go`
+With metrics:
+
+```
+go build --tags metrics proxy.go
+```
 
 ## Start proxy server
 
