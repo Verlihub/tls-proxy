@@ -18,6 +18,8 @@
 	of the GNU General Public License.
 */
 
+// TLS Proxy 0.0.1.4
+
 package main
 
 import (
@@ -41,10 +43,11 @@ var (
 	fWait    = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
 	fHub     = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
 	fIP      = flag.Bool("ip", true, "Send client IP")
+	fLog     = flag.Bool("log", false, "Enable connection logging")
 	fCert    = flag.String("cert", "hub.cert", "TLS .cert file")
 	fKey     = flag.String("key", "hub.key", "TLS .key file")
 	fPProf   = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
-	fMetrics = flag.String("metrics", "localhost:2112", "Serve metrics on a given address (empty = disabled)")
+	fMetrics = flag.String("metrics", "", "Serve metrics on a given address (empty = disabled)")
 	fBuf     = flag.Int("buf", 10, "Buffer size in KB")
 )
 
@@ -123,16 +126,31 @@ func acceptOn(l net.Listener) {
 	for {
 		c, err := l.Accept()
 		if err != nil {
-			log.Println(err)
-			metrics.ConnError.Add(1)
+			if *fLog {
+				log.Println(err)
+			}
+
+			if *fMetrics != "" {
+				metrics.ConnError.Add(1)
+			}
+
 			continue
 		}
-		metrics.ConnAccepted.Add(1)
+
+		if *fMetrics != "" {
+			metrics.ConnAccepted.Add(1)
+		}
+
 		go func() {
 			err := serve(c)
 			if err != nil && err != io.EOF {
-				metrics.ConnError.Add(1)
-				log.Println(c.RemoteAddr(), err)
+				if *fMetrics != "" {
+					metrics.ConnError.Add(1)
+				}
+
+				if *fLog {
+					log.Println(c.RemoteAddr(), err)
+				}
 			}
 		}()
 	}
@@ -143,10 +161,16 @@ type timeoutErr interface {
 }
 
 func serve(c net.Conn) error {
-	metrics.ConnOpen.Add(1)
+	if *fMetrics != "" {
+		metrics.ConnOpen.Add(1)
+	}
+
 	defer func() {
 		_ = c.Close()
-		metrics.ConnOpen.Add(-1)
+
+		if *fMetrics != "" {
+			metrics.ConnOpen.Add(-1)
+		}
 	}()
 
 	addr := c.RemoteAddr().(*net.TCPAddr)
@@ -159,25 +183,38 @@ func serve(c net.Conn) error {
 
 	if tlsConfig == nil || *fWait <= 0 {
 		// no auto-detection
-		metrics.ConnInsecure.Add(1)
-		metrics.ConnOpenInsecure.Add(1)
-		defer metrics.ConnOpenInsecure.Add(-1)
+
+		if *fMetrics != "" {
+			metrics.ConnInsecure.Add(1)
+			metrics.ConnOpenInsecure.Add(1)
+			defer metrics.ConnOpenInsecure.Add(-1)
+		}
+
 		return writeAndStream(buf[:i], c, i)
 	}
 
-	err := c.SetReadDeadline(time.Now().Add(*fWait))
+	start := time.Now()
+	err := c.SetReadDeadline(start.Add(*fWait))
+
 	if err != nil {
 		return err
 	}
 
-	start := time.Now()
+	if *fMetrics != "" {
+		start = time.Now()
+	}
+
 	n, err := c.Read(buf[i:])
 	_ = c.SetReadDeadline(time.Time{})
 	if e, ok := err.(timeoutErr); ok && e.Timeout() {
 		// has to be plain NMDC
-		metrics.ConnInsecure.Add(1)
-		metrics.ConnOpenInsecure.Add(1)
-		defer metrics.ConnOpenInsecure.Add(-1)
+
+		if *fMetrics != "" {
+			metrics.ConnInsecure.Add(1)
+			metrics.ConnOpenInsecure.Add(1)
+			defer metrics.ConnOpenInsecure.Add(-1)
+		}
+
 		return writeAndStream(buf[:i], c, i)
 	}
 	if err != nil {
@@ -196,16 +233,24 @@ func serve(c net.Conn) error {
 		if err != nil {
 			return err
 		}
-		dt := time.Since(start).Seconds()
-		metrics.ConnTLS.Add(1)
-		metrics.ConnOpenTLS.Add(1)
-		defer metrics.ConnOpenTLS.Add(-1)
-		metrics.ConnTLSHandshake.Observe(dt)
+
+		if *fMetrics != "" {
+			dt := time.Since(start).Seconds()
+			metrics.ConnTLS.Add(1)
+			metrics.ConnOpenTLS.Add(1)
+			defer metrics.ConnOpenTLS.Add(-1)
+			metrics.ConnTLSHandshake.Observe(dt)
+		}
+
 		return writeAndStream(buf, tc, i)
 	}
-	metrics.ConnInsecure.Add(1)
-	metrics.ConnOpenInsecure.Add(1)
-	defer metrics.ConnOpenInsecure.Add(-1)
+
+	if *fMetrics != "" {
+		metrics.ConnInsecure.Add(1)
+		metrics.ConnOpenInsecure.Add(1)
+		defer metrics.ConnOpenInsecure.Add(-1)
+	}
+
 	return writeAndStream(buf, c, i)
 }
 
@@ -250,9 +295,20 @@ func stream(c, h io.ReadWriteCloser) error {
 
 	go func() {
 		defer closeBoth()
-		_, _ = copyBuffer(h, c, metrics.ConnRx)
+
+		if *fMetrics != "" {
+			_, _ = copyBuffer(h, c, metrics.ConnRx)
+		} else {
+			_, _ = io.Copy(h, c)
+		}
 	}()
-	_, _ = copyBuffer(c, h, metrics.ConnTx)
+
+	if *fMetrics != "" {
+		_, _ = copyBuffer(c, h, metrics.ConnTx)
+	} else {
+		_, _ = io.Copy(c, h)
+	}
+
 	return nil
 }
 
