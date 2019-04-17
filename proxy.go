@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.1.4
+// TLS Proxy 0.0.1.5
 
 package main
 
@@ -130,23 +130,16 @@ func acceptOn(l net.Listener) {
 				log.Println(err)
 			}
 
-			if *fMetrics != "" {
-				metrics.ConnError.Add(1)
-			}
-
+			metrics.ConnError.Add(1)
 			continue
 		}
 
-		if *fMetrics != "" {
-			metrics.ConnAccepted.Add(1)
-		}
+		metrics.ConnAccepted.Add(1)
 
 		go func() {
 			err := serve(c)
 			if err != nil && err != io.EOF {
-				if *fMetrics != "" {
-					metrics.ConnError.Add(1)
-				}
+				metrics.ConnError.Add(1)
 
 				if *fLog {
 					log.Println(c.RemoteAddr(), err)
@@ -161,16 +154,11 @@ type timeoutErr interface {
 }
 
 func serve(c net.Conn) error {
-	if *fMetrics != "" {
-		metrics.ConnOpen.Add(1)
-	}
+	metrics.ConnOpen.Add(1)
 
 	defer func() {
 		_ = c.Close()
-
-		if *fMetrics != "" {
-			metrics.ConnOpen.Add(-1)
-		}
+		metrics.ConnOpen.Add(-1)
 	}()
 
 	addr := c.RemoteAddr().(*net.TCPAddr)
@@ -183,38 +171,27 @@ func serve(c net.Conn) error {
 
 	if tlsConfig == nil || *fWait <= 0 {
 		// no auto-detection
-
-		if *fMetrics != "" {
-			metrics.ConnInsecure.Add(1)
-			metrics.ConnOpenInsecure.Add(1)
-			defer metrics.ConnOpenInsecure.Add(-1)
-		}
-
+		metrics.ConnInsecure.Add(1)
+		metrics.ConnOpenInsecure.Add(1)
+		defer metrics.ConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
 
-	start := time.Now()
-	err := c.SetReadDeadline(start.Add(*fWait))
+	err := c.SetReadDeadline(time.Now().Add(*fWait))
 
 	if err != nil {
 		return err
 	}
 
-	if *fMetrics != "" {
-		start = time.Now()
-	}
+	start := time.Now()
 
 	n, err := c.Read(buf[i:])
 	_ = c.SetReadDeadline(time.Time{})
 	if e, ok := err.(timeoutErr); ok && e.Timeout() {
 		// has to be plain NMDC
-
-		if *fMetrics != "" {
-			metrics.ConnInsecure.Add(1)
-			metrics.ConnOpenInsecure.Add(1)
-			defer metrics.ConnOpenInsecure.Add(-1)
-		}
-
+		metrics.ConnInsecure.Add(1)
+		metrics.ConnOpenInsecure.Add(1)
+		defer metrics.ConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
 	if err != nil {
@@ -234,23 +211,17 @@ func serve(c net.Conn) error {
 			return err
 		}
 
-		if *fMetrics != "" {
-			dt := time.Since(start).Seconds()
-			metrics.ConnTLS.Add(1)
-			metrics.ConnOpenTLS.Add(1)
-			defer metrics.ConnOpenTLS.Add(-1)
-			metrics.ConnTLSHandshake.Observe(dt)
-		}
-
+		dt := time.Since(start).Seconds()
+		metrics.ConnTLS.Add(1)
+		metrics.ConnOpenTLS.Add(1)
+		defer metrics.ConnOpenTLS.Add(-1)
+		metrics.ConnTLSHandshake.Observe(dt)
 		return writeAndStream(buf, tc, i)
 	}
 
-	if *fMetrics != "" {
-		metrics.ConnInsecure.Add(1)
-		metrics.ConnOpenInsecure.Add(1)
-		defer metrics.ConnOpenInsecure.Add(-1)
-	}
-
+	metrics.ConnInsecure.Add(1)
+	metrics.ConnOpenInsecure.Add(1)
+	defer metrics.ConnOpenInsecure.Add(-1)
 	return writeAndStream(buf, c, i)
 }
 
@@ -295,20 +266,10 @@ func stream(c, h io.ReadWriteCloser) error {
 
 	go func() {
 		defer closeBoth()
-
-		if *fMetrics != "" {
-			_, _ = copyBuffer(h, c, metrics.ConnRx)
-		} else {
-			_, _ = io.Copy(h, c)
-		}
+		_, _ = copyBuffer(h, c, metrics.ConnRx)
 	}()
 
-	if *fMetrics != "" {
-		_, _ = copyBuffer(c, h, metrics.ConnTx)
-	} else {
-		_, _ = io.Copy(c, h)
-	}
-
+	_, _ = copyBuffer(c, h, metrics.ConnTx)
 	return nil
 }
 
