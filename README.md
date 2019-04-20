@@ -1,6 +1,6 @@
 # TLS proxy
 
-TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.2 and later.
+TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.5 and later.
 
 ## Generate self signed certificate
 
@@ -48,9 +48,9 @@ Then start the hub as usual.
 
 Following command is sent to the hub right after the connection is established:
 
-`$MyIP 2.3.4.5 P/S|`
+`$MyIP 2.3.4.5 1.0|`
 
-`2.3.4.5` is the real IP address of connected user. `P` stands for plain and `S` stands for secure connection mode.
+`2.3.4.5` is the real IP address of connected user. Second parameter stands for TLS version used by client, in case of non secure connection, `0.0` is passed to hub.
 
 ## Important to know
 

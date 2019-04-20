@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.1.5
+// TLS Proxy 0.0.1.6
 
 package main
 
@@ -39,20 +39,21 @@ import (
 )
 
 var (
-	fHost    = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
-	fWait    = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
-	fHub     = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
-	fIP      = flag.Bool("ip", true, "Send client IP")
-	fLog     = flag.Bool("log", false, "Enable connection logging")
-	fCert    = flag.String("cert", "hub.cert", "TLS .cert file")
-	fKey     = flag.String("key", "hub.key", "TLS .key file")
-	fPProf   = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
+	fHost = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
+	fWait = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
+	fHub = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
+	fIP = flag.Bool("ip", true, "Send client IP")
+	fLog = flag.Bool("log", false, "Enable connection logging")
+	fCert = flag.String("cert", "hub.cert", "TLS .cert file")
+	fKey = flag.String("key", "hub.key", "TLS .key file")
+	fPProf = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
 	fMetrics = flag.String("metrics", "", "Serve metrics on a given address (empty = disabled)")
-	fBuf     = flag.Int("buf", 10, "Buffer size in KB")
+	fBuf = flag.Int("buf", 10, "Buffer size in KB")
 )
 
 func main() {
 	flag.Parse()
+
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
@@ -67,23 +68,28 @@ func run() error {
 		tlsConfig = &tls.Config{NextProtos: []string{"nmdc"}}
 		tlsConfig.Certificates = make([]tls.Certificate, 1)
 		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(*fCert, *fKey)
+
 		if err != nil {
 			return err
 		}
+
 	} else {
 		log.Println("no certs; TLS disabled")
 	}
 
 	if *fPProf != "" {
 		log.Println("enabling profiler on", *fPProf)
+
 		go func() {
 			if err := http.ListenAndServe(*fPProf, nil); err != nil {
 				log.Println("cannot enable profiler:", err)
 			}
 		}()
 	}
+
 	if *fMetrics != "" {
 		log.Println("serving metrics on", *fMetrics)
+
 		go func() {
 			if err := metrics.ListenAndServe(*fMetrics); err != nil {
 				log.Println("cannot serve metrics:", err)
@@ -92,8 +98,8 @@ func run() error {
 	}
 
 	hosts := strings.Split(*fHost, ",")
-
 	var lis []net.Listener
+
 	defer func() {
 		for _, l := range lis {
 			_ = l.Close()
@@ -102,22 +108,27 @@ func run() error {
 
 	for _, host := range hosts {
 		l, err := net.Listen("tcp4", host)
+
 		if err != nil {
 			return err
 		}
+
 		lis = append(lis, l)
 	}
 
 	var wg sync.WaitGroup
+
 	for i, l := range lis {
 		wg.Add(1)
 		l := l
 		log.Println("proxying", hosts[i], "to", *fHub)
+
 		go func() {
 			defer wg.Done()
 			acceptOn(l)
 		}()
 	}
+
 	wg.Wait()
 	return nil
 }
@@ -125,6 +136,7 @@ func run() error {
 func acceptOn(l net.Listener) {
 	for {
 		c, err := l.Accept()
+
 		if err != nil {
 			if *fLog {
 				log.Println(err)
@@ -138,6 +150,7 @@ func acceptOn(l net.Listener) {
 
 		go func() {
 			err := serve(c)
+
 			if err != nil && err != io.EOF {
 				metrics.ConnError.Add(1)
 
@@ -161,16 +174,12 @@ func serve(c net.Conn) error {
 		metrics.ConnOpen.Add(-1)
 	}()
 
-	addr := c.RemoteAddr().(*net.TCPAddr)
-	ip := addr.IP.String()
-
 	buf := make([]byte, 1024)
 	i := copy(buf, "$MyIP ")
-	i += copy(buf[i:], ip)
-	i += copy(buf[i:], " P|")
+	i += copy(buf[i:], c.RemoteAddr().(*net.TCPAddr).IP.String())
+	i += copy(buf[i:], " 0.0|")
 
-	if tlsConfig == nil || *fWait <= 0 {
-		// no auto-detection
+	if tlsConfig == nil || *fWait <= 0 { // no auto detection
 		metrics.ConnInsecure.Add(1)
 		metrics.ConnOpenInsecure.Add(1)
 		defer metrics.ConnOpenInsecure.Add(-1)
@@ -184,33 +193,48 @@ func serve(c net.Conn) error {
 	}
 
 	start := time.Now()
-
 	n, err := c.Read(buf[i:])
 	_ = c.SetReadDeadline(time.Time{})
-	if e, ok := err.(timeoutErr); ok && e.Timeout() {
-		// has to be plain NMDC
+
+	if e, ok := err.(timeoutErr); ok && e.Timeout() { // has to be plain nmdc
 		metrics.ConnInsecure.Add(1)
 		metrics.ConnOpenInsecure.Add(1)
 		defer metrics.ConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
+
 	if err != nil {
 		return err
 	}
+
 	buf = buf[:i+n]
+
 	if n >= 2 && buf[i] == 0x16 && buf[i+1] == 0x03 {
 		tlsBuf := buf[i:]
-		buf[i-2] = 'S'
-		buf = buf[:i]
 		c = &multiReadConn{r: io.MultiReader(bytes.NewReader(tlsBuf), c), Conn: c}
-		// TLS handshake
-		tc := tls.Server(c, tlsConfig)
+		tc := tls.Server(c, tlsConfig) // tls handshake
 		defer tc.Close()
 		err = tc.Handshake()
+
 		if err != nil {
 			return err
 		}
 
+		buf[i-4] = '1' // set version
+		state := tc.ConnectionState()
+
+		switch state.Version {
+			case tls.VersionTLS13:
+				buf[i-2] = '3'
+			case tls.VersionTLS12:
+				buf[i-2] = '2'
+			case tls.VersionTLS11:
+				buf[i-2] = '1'
+			default:
+				buf[i-2] = '0'
+		}
+
+		buf = buf[:i]
 		dt := time.Since(start).Seconds()
 		metrics.ConnTLS.Add(1)
 		metrics.ConnOpenTLS.Add(1)
@@ -240,20 +264,25 @@ func dialHub() (net.Conn, error) {
 
 func writeAndStream(p []byte, c io.ReadWriteCloser, i int) error {
 	h, err := dialHub()
+
 	if err != nil {
 		return err
 	}
+
 	defer h.Close()
 
 	if !*fIP {
 		p = p[i:]
 	}
+
 	if len(p) > 0 {
 		_, err = h.Write(p)
+
 		if err != nil {
 			return err
 		}
 	}
+
 	return stream(c, h)
 }
 
@@ -262,6 +291,7 @@ func stream(c, h io.ReadWriteCloser) error {
 		_ = c.Close()
 		_ = h.Close()
 	}
+
 	defer closeBoth()
 
 	go func() {
@@ -273,9 +303,11 @@ func stream(c, h io.ReadWriteCloser) error {
 	return nil
 }
 
-// copyBuffer was copied from io package and modified to add instrumentation.
+// copyBuffer was copied from io package and modified to add instrumentation
+
 func copyBuffer(dst io.Writer, src io.Reader, cnt metrics.Counter) (written int64, err error) {
 	size := *fBuf * 1024
+
 	if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
 		if l.N < 1 {
 			size = 1
@@ -283,31 +315,40 @@ func copyBuffer(dst io.Writer, src io.Reader, cnt metrics.Counter) (written int6
 			size = int(l.N)
 		}
 	}
+
 	buf := make([]byte, size)
+
 	for {
 		nr, er := src.Read(buf)
+
 		if nr > 0 {
 			nw, ew := dst.Write(buf[0:nr])
 			cnt.Add(float64(nw))
+
 			if nw > 0 {
 				written += int64(nw)
 			}
+
 			if ew != nil {
 				err = ew
 				break
 			}
+
 			if nr != nw {
 				err = io.ErrShortWrite
 				break
 			}
 		}
+
 		if er != nil {
 			if er != io.EOF {
 				err = er
 			}
+
 			break
 		}
 	}
+
 	return written, err
 }
 
