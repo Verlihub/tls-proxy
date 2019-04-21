@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.1.6
+// TLS Proxy 0.0.1.7
 
 package main
 
@@ -27,6 +27,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"io"
+	"os"
 	"log"
 	"net"
 	"net/http"
@@ -53,6 +54,7 @@ var (
 
 func main() {
 	flag.Parse()
+	os.Setenv("GODEBUG", os.Getenv("GODEBUG")+",tls13=1")
 
 	if err := run(); err != nil {
 		log.Fatal(err)
