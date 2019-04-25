@@ -232,8 +232,8 @@ func serve(c net.Conn) error {
 				buf[i-2] = '2'
 			case tls.VersionTLS11:
 				buf[i-2] = '1'
-			default:
-				buf[i-2] = '0'
+			//default:
+				//buf[i-2] = '0'
 		}
 
 		buf = buf[:i]
