@@ -1,1 +1,4 @@
-/build/
+build/
+vendor/
+*.so
+*.a

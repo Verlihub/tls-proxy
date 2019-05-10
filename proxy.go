@@ -25,7 +25,6 @@ package main
 import (
 	"flag"
 	"log"
-	_ "net/http/pprof"
 	"strings"
 	"time"
 
