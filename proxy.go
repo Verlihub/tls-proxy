@@ -27,11 +27,11 @@ import (
 	"crypto/tls"
 	"flag"
 	"io"
-	"os"
 	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -40,16 +40,16 @@ import (
 )
 
 var (
-	fHost = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
-	fWait = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
-	fHub = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
-	fIP = flag.Bool("ip", true, "Send client IP")
-	fLog = flag.Bool("log", false, "Enable connection logging")
-	fCert = flag.String("cert", "hub.cert", "TLS .cert file")
-	fKey = flag.String("key", "hub.key", "TLS .key file")
-	fPProf = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
+	fHost    = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
+	fWait    = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
+	fHub     = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
+	fIP      = flag.Bool("ip", true, "Send client IP")
+	fLog     = flag.Bool("log", false, "Enable connection logging")
+	fCert    = flag.String("cert", "hub.cert", "TLS .cert file")
+	fKey     = flag.String("key", "hub.key", "TLS .key file")
+	fPProf   = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
 	fMetrics = flag.String("metrics", "", "Serve metrics on a given address (empty = disabled)")
-	fBuf = flag.Int("buf", 10, "Buffer size in KB")
+	fBuf     = flag.Int("buf", 10, "Buffer size in KB")
 )
 
 func main() {
@@ -226,14 +226,14 @@ func serve(c net.Conn) error {
 		state := tc.ConnectionState()
 
 		switch state.Version {
-			case tls.VersionTLS13:
-				buf[i-2] = '3'
-			case tls.VersionTLS12:
-				buf[i-2] = '2'
-			case tls.VersionTLS11:
-				buf[i-2] = '1'
+		case tls.VersionTLS13:
+			buf[i-2] = '3'
+		case tls.VersionTLS12:
+			buf[i-2] = '2'
+		case tls.VersionTLS11:
+			buf[i-2] = '1'
 			//default:
-				//buf[i-2] = '0'
+			//buf[i-2] = '0'
 		}
 
 		buf = buf[:i]
