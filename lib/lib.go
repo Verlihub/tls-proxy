@@ -37,6 +37,8 @@ func DCProxyStart(conf *C.DCProxyConfig) C.int {
 		Hosts:      strings.Split(C.GoString(conf.Hosts), ","),
 		Cert:       C.GoString(conf.Cert),
 		Key:        C.GoString(conf.Key),
+		CertOrg:    C.GoString(conf.CertOrg),
+		CertHost:   C.GoString(conf.CertHost),
 		PProf:      C.GoString(conf.PProf),
 		Metrics:    C.GoString(conf.Metrics),
 		LogErrors:  bool(conf.LogErrors),

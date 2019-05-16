@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Verlihub/tls-proxy/certs"
 	"github.com/Verlihub/tls-proxy/metrics"
 )
 
@@ -25,6 +27,8 @@ type Config struct {
 	Hosts      []string      // list of hosts to listen on
 	Cert       string        // path to TLS cert file
 	Key        string        // path to TLS key file
+	CertOrg    string        // organization name for the auto-generated TLS certificate
+	CertHost   string        // host for the auto-generated TLS certificate
 	PProf      string        // serve profiler on a given address (empty = disabled)
 	Metrics    string        // serve metrics on a given address (empty = disabled)
 	LogErrors  bool          // log connection errors
@@ -52,19 +56,38 @@ func New(c Config) (*Proxy, error) {
 		c.Buffer = 10
 	}
 	p := &Proxy{c: c}
-	if c.Cert != "" && c.Key != "" {
-		log.Println("using certs:", c.Cert, c.Key)
-		var err error
-		tlsConfig := &tls.Config{NextProtos: []string{"nmdc"}}
-		tlsConfig.Certificates = make([]tls.Certificate, 1)
-		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(c.Cert, c.Key)
+	if c.Cert == "" && c.Key == "" {
+		c.Cert = "hub.cert"
+		c.Key = "hub.key"
+	}
+	if _, err := os.Stat(c.Key); os.IsNotExist(err) {
+		log.Println("generating certs:", c.Cert, c.Key)
+		if c.CertOrg == "" {
+			c.CertOrg = "DCProxy"
+		}
+		if c.CertHost == "" {
+			c.CertHost = "localhost"
+		}
+		cert, key, err := certs.Generate(c.CertHost, c.CertOrg)
 		if err != nil {
 			return nil, err
 		}
-		p.tls = tlsConfig
-	} else {
-		log.Println("no certs; TLS disabled")
+		if err = ioutil.WriteFile(c.Cert, cert, 0644); err != nil {
+			return nil, err
+		}
+		if err = ioutil.WriteFile(c.Key, key, 0600); err != nil {
+			return nil, err
+		}
 	}
+	log.Println("using certs:", c.Cert, c.Key)
+	var err error
+	tlsConfig := &tls.Config{NextProtos: []string{"nmdc"}}
+	tlsConfig.Certificates = make([]tls.Certificate, 1)
+	tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(c.Cert, c.Key)
+	if err != nil {
+		return nil, err
+	}
+	p.tls = tlsConfig
 	return p, nil
 }
 

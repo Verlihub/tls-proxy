@@ -32,17 +32,19 @@ import (
 )
 
 var (
-	fHost    = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
-	fWait    = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
-	fHub     = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
-	fHubNet  = flag.String("net", "tcp4", "Hub network (tcp4, tcp6, tcp, unix)")
-	fIP      = flag.Bool("ip", true, "Send client IP")
-	fLog     = flag.Bool("log", false, "Enable connection logging")
-	fCert    = flag.String("cert", "hub.cert", "TLS .cert file")
-	fKey     = flag.String("key", "hub.key", "TLS .key file")
-	fPProf   = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
-	fMetrics = flag.String("metrics", "", "Serve metrics on a given address (empty = disabled)")
-	fBuf     = flag.Int("buf", 10, "Buffer size in KB")
+	fHost     = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
+	fWait     = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
+	fHub      = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
+	fHubNet   = flag.String("net", "tcp4", "Hub network (tcp4, tcp6, tcp, unix)")
+	fIP       = flag.Bool("ip", true, "Send client IP")
+	fLog      = flag.Bool("log", false, "Enable connection logging")
+	fCert     = flag.String("cert", "hub.cert", "TLS .cert file")
+	fKey      = flag.String("key", "hub.key", "TLS .key file")
+	fPProf    = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
+	fMetrics  = flag.String("metrics", "", "Serve metrics on a given address (empty = disabled)")
+	fBuf      = flag.Int("buf", 10, "Buffer size in KB")
+	fCertOrg  = flag.String("cert-org", "", "organization name for auto-generated TLS certificate")
+	fCertHost = flag.String("cert-host", "", "host for auto-generated TLS certificate")
 )
 
 func main() {
@@ -60,6 +62,8 @@ func run() error {
 		Hosts:      strings.Split(*fHost, ","),
 		Cert:       *fCert,
 		Key:        *fKey,
+		CertOrg:    *fCertOrg,
+		CertHost:   *fCertHost,
 		PProf:      *fPProf,
 		Metrics:    *fMetrics,
 		LogErrors:  *fLog,

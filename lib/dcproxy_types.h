@@ -9,6 +9,8 @@ typedef struct DCProxyConfig {
 	const char * Hosts; // comma separated
 	const char * Cert;
 	const char * Key;
+	const char * CertOrg;
+	const char * CertHost;
 	const char * PProf;
 	const char * Metrics;
 	bool LogErrors;
