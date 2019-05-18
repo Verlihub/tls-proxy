@@ -8,6 +8,7 @@ import "C"
 import (
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/Verlihub/tls-proxy/dcproxy"
 )
@@ -28,6 +29,14 @@ func DCLastError() *C.char {
 }
 
 var curProxy *dcproxy.Proxy
+
+//export NewDCProxyConfig
+func NewDCProxyConfig() *C.DCProxyConfig {
+	const sz = C.size_t(unsafe.Sizeof(C.DCProxyConfig{}))
+	c := (*C.DCProxyConfig)(C.malloc(sz))
+	*c = C.DCProxyConfig{} // zero memory
+	return c
+}
 
 //export DCProxyStart
 func DCProxyStart(conf *C.DCProxyConfig) C.int {
