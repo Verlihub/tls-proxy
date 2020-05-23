@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2019 Dexo, dexo at verlihub dot net
-	Copyright (C) 2019 Verlihub Team, info at verlihub dot net
+	Copyright (C) 2019-2020 Dexo, dexo at verlihub dot net
+	Copyright (C) 2019-2020 Verlihub Team, info at verlihub dot net
 
 	This is free software; You can redistribute it
 	and modify it under the terms of the GNU General
@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.1.7
+// TLS Proxy 0.0.1.9
 
 package main
 
@@ -27,34 +27,26 @@ import (
 	"crypto/tls"
 	"flag"
 	"io"
-	"os"
 	"log"
 	"net"
-	"net/http"
-	_ "net/http/pprof"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/Verlihub/tls-proxy/metrics"
 )
 
 var (
-	fHost = flag.String("host", ":411", "Comma-separated list of hosts to listen on")
+	fHost = flag.String("host", ":411", "Comma separated list of hosts to listen on")
 	fWait = flag.Duration("wait", 650*time.Millisecond, "Time to wait to detect the protocol")
 	fHub = flag.String("hub", "127.0.0.1:411", "Hub address to connect to")
 	fIP = flag.Bool("ip", true, "Send client IP")
 	fLog = flag.Bool("log", false, "Enable connection logging")
-	fCert = flag.String("cert", "hub.cert", "TLS .cert file")
+	fCert = flag.String("cert", "hub.crt", "TLS .crt file")
 	fKey = flag.String("key", "hub.key", "TLS .key file")
-	fPProf = flag.String("pprof", "", "Serve profiler on a given address (empty = disabled)")
-	fMetrics = flag.String("metrics", "", "Serve metrics on a given address (empty = disabled)")
 	fBuf = flag.Int("buf", 10, "Buffer size in KB")
 )
 
 func main() {
 	flag.Parse()
-	os.Setenv("GODEBUG", os.Getenv("GODEBUG")+",tls13=1")
 
 	if err := run(); err != nil {
 		log.Fatal(err)
@@ -65,7 +57,7 @@ var tlsConfig *tls.Config
 
 func run() error {
 	if *fCert != "" && *fKey != "" {
-		log.Println("using certs:", *fCert, *fKey)
+		log.Println("Using certificates:", *fCert, *fKey)
 		var err error
 		tlsConfig = &tls.Config{NextProtos: []string{"nmdc"}}
 		tlsConfig.Certificates = make([]tls.Certificate, 1)
@@ -76,27 +68,7 @@ func run() error {
 		}
 
 	} else {
-		log.Println("no certs; TLS disabled")
-	}
-
-	if *fPProf != "" {
-		log.Println("enabling profiler on", *fPProf)
-
-		go func() {
-			if err := http.ListenAndServe(*fPProf, nil); err != nil {
-				log.Println("cannot enable profiler:", err)
-			}
-		}()
-	}
-
-	if *fMetrics != "" {
-		log.Println("serving metrics on", *fMetrics)
-
-		go func() {
-			if err := metrics.ListenAndServe(*fMetrics); err != nil {
-				log.Println("cannot serve metrics:", err)
-			}
-		}()
+		log.Println("No certificates, TLS disabled")
 	}
 
 	hosts := strings.Split(*fHost, ",")
@@ -123,7 +95,7 @@ func run() error {
 	for i, l := range lis {
 		wg.Add(1)
 		l := l
-		log.Println("proxying", hosts[i], "to", *fHub)
+		log.Println("Proxying", hosts[i], "to", *fHub)
 
 		go func() {
 			defer wg.Done()
@@ -144,18 +116,13 @@ func acceptOn(l net.Listener) {
 				log.Println(err)
 			}
 
-			metrics.ConnError.Add(1)
 			continue
 		}
-
-		metrics.ConnAccepted.Add(1)
 
 		go func() {
 			err := serve(c)
 
 			if err != nil && err != io.EOF {
-				metrics.ConnError.Add(1)
-
 				if *fLog {
 					log.Println(c.RemoteAddr(), err)
 				}
@@ -169,11 +136,8 @@ type timeoutErr interface {
 }
 
 func serve(c net.Conn) error {
-	metrics.ConnOpen.Add(1)
-
 	defer func() {
 		_ = c.Close()
-		metrics.ConnOpen.Add(-1)
 	}()
 
 	buf := make([]byte, 1024)
@@ -182,26 +146,20 @@ func serve(c net.Conn) error {
 	i += copy(buf[i:], " 0.0|")
 
 	if tlsConfig == nil || *fWait <= 0 { // no auto detection
-		metrics.ConnInsecure.Add(1)
-		metrics.ConnOpenInsecure.Add(1)
-		defer metrics.ConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
 
-	err := c.SetReadDeadline(time.Now().Add(*fWait))
+	start := time.Now()
+	err := c.SetReadDeadline(start.Add(*fWait))
 
 	if err != nil {
 		return err
 	}
 
-	start := time.Now()
 	n, err := c.Read(buf[i:])
 	_ = c.SetReadDeadline(time.Time{})
 
 	if e, ok := err.(timeoutErr); ok && e.Timeout() { // has to be plain nmdc
-		metrics.ConnInsecure.Add(1)
-		metrics.ConnOpenInsecure.Add(1)
-		defer metrics.ConnOpenInsecure.Add(-1)
 		return writeAndStream(buf[:i], c, i)
 	}
 
@@ -232,22 +190,12 @@ func serve(c net.Conn) error {
 				buf[i-2] = '2'
 			case tls.VersionTLS11:
 				buf[i-2] = '1'
-			//default:
-				//buf[i-2] = '0'
 		}
 
 		buf = buf[:i]
-		dt := time.Since(start).Seconds()
-		metrics.ConnTLS.Add(1)
-		metrics.ConnOpenTLS.Add(1)
-		defer metrics.ConnOpenTLS.Add(-1)
-		metrics.ConnTLSHandshake.Observe(dt)
 		return writeAndStream(buf, tc, i)
 	}
 
-	metrics.ConnInsecure.Add(1)
-	metrics.ConnOpenInsecure.Add(1)
-	defer metrics.ConnOpenInsecure.Add(-1)
 	return writeAndStream(buf, c, i)
 }
 
@@ -298,16 +246,15 @@ func stream(c, h io.ReadWriteCloser) error {
 
 	go func() {
 		defer closeBoth()
-		_, _ = copyBuffer(h, c, metrics.ConnRx)
+		_, _ = copyBuffer(h, c)
 	}()
 
-	_, _ = copyBuffer(c, h, metrics.ConnTx)
+	_, _ = copyBuffer(c, h)
 	return nil
 }
 
-// copyBuffer was copied from io package and modified to add instrumentation
-
-func copyBuffer(dst io.Writer, src io.Reader, cnt metrics.Counter) (written int64, err error) {
+// this was copied from io package and modified to add instrumentation
+func copyBuffer(dst io.Writer, src io.Reader) (written int64, err error) {
 	size := *fBuf * 1024
 
 	if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
@@ -325,7 +272,6 @@ func copyBuffer(dst io.Writer, src io.Reader, cnt metrics.Counter) (written int6
 
 		if nr > 0 {
 			nw, ew := dst.Write(buf[0:nr])
-			cnt.Add(float64(nw))
 
 			if nw > 0 {
 				written += int64(nw)

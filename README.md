@@ -4,17 +4,15 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.5 and 
 
 ## Generate self signed certificate
 
-`openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out "CertName.crt" -keyout "KeyName.key"`
+`openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out "hub.crt" -keyout "hub.key"`
 
-## Install GoLang
-
-In order to install latest version:
-
-`sudo snap install --classic go`
-
-Else use:
+## Install Go
 
 `sudo apt-get install golang`
+
+On old distributions you might need to use `snap` to install later version:
+
+`sudo snap install --classic go`
 
 ## Compile proxy server
 
@@ -24,15 +22,9 @@ cd tls-proxy
 go build proxy.go
 ```
 
-With metrics:
-
-```
-go build --tags metrics proxy.go
-```
-
 ## Start proxy server
 
-`./proxy --cert="/path/to/CertName.crt" --key="/path/to/KeyName.key" --host="1.2.3.4:411" --hub="127.0.0.1:411"`
+`./proxy --cert="/path/to/hub.crt" --key="/path/to/hub.key" --host="1.2.3.4:411" --hub="127.0.0.1:411"`
 
 `1.2.3.4:411` is the proxy listening socket, the address that hub would normally be listening on. `127.0.0.1:411` is the hub listening socket, the address that accepts connections from the proxy. Add `&` at the end of command to run the process in background.
 
