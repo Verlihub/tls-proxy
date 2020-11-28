@@ -12,7 +12,7 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.5 and 
 
 On old distributions you might need to use `snap` to install later version:
 
-`sudo snap install --classic go`
+`sudo snap install --classic --channel=1.14/stable go`
 
 ## Compile proxy server
 
