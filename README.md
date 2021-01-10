@@ -8,7 +8,7 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.5 and 
 
 ## Install Go
 
-`sudo apt-get install golang`
+`sudo apt install golang`
 
 On old distributions you might need to use `snap` to install later version:
 
