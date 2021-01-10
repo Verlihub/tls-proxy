@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2019-2020 Dexo, dexo at verlihub dot net
-	Copyright (C) 2019-2020 Verlihub Team, info at verlihub dot net
+	Copyright (C) 2019-2021 Verlihub Team, info at verlihub dot net
 
 	This is free software; You can redistribute it
 	and modify it under the terms of the GNU General
@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.1.9
+// TLS Proxy 0.0.2.0
 
 package main
 
