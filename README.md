@@ -10,16 +10,12 @@ TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.5 and 
 
 `sudo apt install golang`
 
-On old distributions you might need to use `snap` to install later version:
-
-`sudo snap install --classic --channel=1.14/stable go`
-
 ## Compile proxy server
 
 ```
 git clone https://github.com/verlihub/tls-proxy.git
 cd tls-proxy
-go build proxy.go
+export CGO_ENABLED=0 && go build -ldflags "-libgcc=none" -tags netgo proxy.go
 ```
 
 ## Start proxy server
