@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2019-2020 Dexo, dexo at verlihub dot net
-	Copyright (C) 2019-2021 Verlihub Team, info at verlihub dot net
+	Copyright (C) 2019-2021 Dexo, dexo at verlihub dot net
+	Copyright (C) 2019-2022 Verlihub Team, info at verlihub dot net
 
 	This is free software; You can redistribute it
 	and modify it under the terms of the GNU General
@@ -14,11 +14,11 @@
 	a particular purpose. See the GNU General Public
 	License for more details.
 
-	Please see http://www.gnu.org/licenses/ for a copy
+	Please see https://www.gnu.org/licenses/ for a copy
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.2.0
+// TLS Proxy 0.0.2.2
 
 package main
 
@@ -42,6 +42,7 @@ var (
 	fLog = flag.Bool("log", false, "Enable connection logging")
 	fCert = flag.String("cert", "hub.crt", "TLS .crt file")
 	fKey = flag.String("key", "hub.key", "TLS .key file")
+	fVer = flag.Int("ver", 2, "Minimum required TLS version") // 0 - 1.0, 1 - 1.2, 2 - 1.2, 3 - 1.3
 	fBuf = flag.Int("buf", 10, "Buffer size in KB")
 )
 
@@ -59,7 +60,20 @@ func run() error {
 	if *fCert != "" && *fKey != "" {
 		log.Println("Using certificates:", *fCert, *fKey)
 		var err error
-		tlsConfig = &tls.Config{NextProtos: []string{"nmdc"}}
+		var minver uint16
+
+		switch *fVer {
+			case 0:
+				minver = tls.VersionTLS10
+			case 1:
+				minver = tls.VersionTLS11
+			case 2:
+				minver = tls.VersionTLS12
+			default:
+				minver = tls.VersionTLS13
+		}
+
+		tlsConfig = &tls.Config{NextProtos: []string{"nmdc"}, MinVersion: minver}
 		tlsConfig.Certificates = make([]tls.Certificate, 1)
 		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(*fCert, *fKey)
 
