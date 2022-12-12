@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-// TLS Proxy 0.0.2.2
+// TLS Proxy 0.0.3.0
 
 package main
 
