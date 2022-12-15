@@ -34,6 +34,12 @@ By default TLS proxy requires TLS version `1.2` and higher, to change that use `
 
 `!set tls_proxy_ip 127.0.0.1`
 
+## Revert the configuration
+
+`!set listen_ip 1.2.3.4`
+
+`!set tls_proxy_ip `
+
 Then start the hub as usual.
 
 ## Protocol specification
