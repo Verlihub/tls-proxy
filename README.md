@@ -24,6 +24,12 @@ export CGO_ENABLED=0 && go build -ldflags "-libgcc=none" -tags netgo proxy.go
 
 `1.2.3.4:411` is the proxy listening socket, the address that hub would normally be listening on. `127.0.0.1:411` is the hub listening socket, the address that accepts connections from the proxy. Add `&` at the end of command to run the process in background.
 
+## Listen on multiple ports
+
+`--host="1.2.3.4:411,1.2.3.4:1411"`
+
+Host parameter takes a list of listening addresses separated by comma.
+
 ## Required TLS version
 
 By default TLS proxy requires TLS version `1.2` and higher, to change that use `--ver 0/1/2/3` where the parameter is minor version number.
