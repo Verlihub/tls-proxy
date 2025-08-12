@@ -59,3 +59,15 @@ Following command is sent to the hub right after the connection is established:
 ## Important to know
 
 Remember to set twice the regular `ulimit` before starting both servers, because there will be twice as many connections than you would usually have.
+
+## Command line options
+
+`host` - Comma separated list of hosts to listen on
+`wait` - Time to wait to detect the protocol
+`hub` - Hub address to connect to
+`ip` - Send client IP
+`log` - Enable connection logging
+`cert` - TLS .crt file
+`key` - TLS .key file
+`ver` - Minimum required TLS version
+`buf` - Buffer size in KB
