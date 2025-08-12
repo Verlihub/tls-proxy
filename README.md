@@ -63,11 +63,19 @@ Remember to set twice the regular `ulimit` before starting both servers, because
 ## Command line options
 
 `host` - Comma separated list of hosts to listen on
+
 `wait` - Time to wait to detect the protocol
+
 `hub` - Hub address to connect to
+
 `ip` - Send client IP
+
 `log` - Enable connection logging
+
 `cert` - TLS .crt file
+
 `key` - TLS .key file
+
 `ver` - Minimum required TLS version
+
 `buf` - Buffer size in KB
