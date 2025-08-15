@@ -18,7 +18,7 @@
 	of the GNU General Public License.
 */
 
-module tls-proxy
+module github.com/verlihub/tls-proxy
 
 go 1.13 // 1.12
 
