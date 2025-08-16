@@ -18,12 +18,24 @@
 	of the GNU General Public License.
 */
 
-// +build !metrics
+#ifndef PROXY_H
+#define PROXY_H
 
-package metrics
+#include <stdbool.h>
 
-func listenAndServe(addr string) error {
-	return nil
-}
+typedef struct VHProxyConfig {
+	const char* HubAddr;
+	const char* HubNetwork;
+	const char* Hosts; // comma separated
+	const char* Cert;
+	const char* Key;
+	const char* CertOrg;
+	const char* CertHost;
+	bool LogErrors;
+	int Wait; // ms
+	int Buffer; // kb
+	int MinVer;
+	bool NoSendIP;
+} VHProxyConfig;
 
-// end of file
+#endif // PROXY_H

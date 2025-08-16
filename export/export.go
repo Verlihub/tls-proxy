@@ -21,7 +21,7 @@
 package main
 
 /*
-#include "dcproxy_types.h"
+#include "proxy.h"
 */
 
 import "C"
@@ -31,7 +31,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/verlihub/tls-proxy/dcproxy"
+	"github.com/verlihub/tls-proxy/proxy"
 )
 
 var lastErr error
@@ -40,8 +40,8 @@ func setLastErr(err error) {
 	lastErr = err
 }
 
-//export DCLastError
-func DCLastError() *C.char {
+//export VHProxyError
+func VHProxyError() *C.char {
 	if lastErr == nil {
 		return nil
 	}
@@ -50,19 +50,19 @@ func DCLastError() *C.char {
 	return C.CString(e)
 }
 
-var curProxy *dcproxy.Proxy
+var curProxy *proxy.Proxy
 
-//export NewDCProxyConfig
-func NewDCProxyConfig() *C.DCProxyConfig {
-	const sz = C.size_t(unsafe.Sizeof(C.DCProxyConfig{}))
-	c := (*C.DCProxyConfig)(C.malloc(sz))
-	*c = C.DCProxyConfig{} // zero memory
+//export NewVHProxyConfig
+func NewVHProxyConfig() *C.VHProxyConfig {
+	const sz = C.size_t(unsafe.Sizeof(C.VHProxyConfig{}))
+	c := (*C.VHProxyConfig)(C.malloc(sz))
+	*c = C.VHProxyConfig{} // zero memory
 	return c
 }
 
-//export DCProxyStart
-func DCProxyStart(conf *C.DCProxyConfig) C.int {
-	c := dcproxy.Config{
+//export VHProxyStart
+func VHProxyStart(conf *C.VHProxyConfig) C.int {
+	c := proxy.Config {
 		HubAddr: C.GoString(conf.HubAddr),
 		HubNetwork: C.GoString(conf.HubNetwork),
 		Hosts: strings.Split(C.GoString(conf.Hosts), ","),
@@ -70,8 +70,6 @@ func DCProxyStart(conf *C.DCProxyConfig) C.int {
 		Key: C.GoString(conf.Key),
 		CertOrg: C.GoString(conf.CertOrg),
 		CertHost: C.GoString(conf.CertHost),
-		PProf: C.GoString(conf.PProf),
-		Metrics: C.GoString(conf.Metrics),
 		LogErrors: bool(conf.LogErrors),
 		Wait: time.Duration(conf.Wait) * time.Millisecond,
 		Buffer: int(conf.Buffer),
@@ -79,7 +77,7 @@ func DCProxyStart(conf *C.DCProxyConfig) C.int {
 		NoSendIP: bool(conf.NoSendIP),
 	}
 
-	p, err := dcproxy.New(c)
+	p, err := proxy.New(c)
 
 	if err != nil {
 		setLastErr(err)
@@ -97,8 +95,8 @@ func DCProxyStart(conf *C.DCProxyConfig) C.int {
 	return 1
 }
 
-//export DCProxyStop
-func DCProxyStop() {
+//export VHProxyStop
+func VHProxyStop() {
 	if curProxy == nil {
 		return
 	}
