@@ -18,12 +18,12 @@
 	of the GNU General Public License.
 */
 
-#ifndef PROXY_H
-#define PROXY_H
+#ifndef PROXY_TYPES_H
+#define PROXY_TYPES_H
 
 #include <stdbool.h>
 
-typedef struct VHProxyConfig {
+typedef struct VH_ProxyConfig {
 	const char* HubAddr;
 	const char* HubNetwork;
 	const char* Hosts; // comma separated
@@ -36,6 +36,6 @@ typedef struct VHProxyConfig {
 	int Buffer; // kb
 	int MinVer;
 	bool NoSendIP;
-} VHProxyConfig;
+} VH_ProxyConfig;
 
-#endif // PROXY_H
+#endif // PROXY_TYPES_H

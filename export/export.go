@@ -20,10 +20,7 @@
 
 package main
 
-/*
-#include "proxy.h"
-*/
-
+//#include "proxy_types.h"
 import "C"
 
 import (
@@ -40,8 +37,8 @@ func setLastErr(err error) {
 	lastErr = err
 }
 
-//export VHProxyError
-func VHProxyError() *C.char {
+//export VH_ProxyError
+func VH_ProxyError() *C.char {
 	if lastErr == nil {
 		return nil
 	}
@@ -52,16 +49,16 @@ func VHProxyError() *C.char {
 
 var curProxy *proxy.Proxy
 
-//export NewVHProxyConfig
-func NewVHProxyConfig() *C.VHProxyConfig {
-	const sz = C.size_t(unsafe.Sizeof(C.VHProxyConfig{}))
-	c := (*C.VHProxyConfig)(C.malloc(sz))
-	*c = C.VHProxyConfig{} // zero memory
+//export VH_ProxyCreate
+func VH_ProxyCreate() *C.VH_ProxyConfig {
+	const sz = C.size_t(unsafe.Sizeof(C.VH_ProxyConfig{}))
+	c := (*C.VH_ProxyConfig)(C.malloc(sz))
+	*c = C.VH_ProxyConfig{} // zero memory
 	return c
 }
 
-//export VHProxyStart
-func VHProxyStart(conf *C.VHProxyConfig) C.int {
+//export VH_ProxyStart
+func VH_ProxyStart(conf *C.VH_ProxyConfig) C.int {
 	c := proxy.Config {
 		HubAddr: C.GoString(conf.HubAddr),
 		HubNetwork: C.GoString(conf.HubNetwork),
@@ -95,8 +92,8 @@ func VHProxyStart(conf *C.VHProxyConfig) C.int {
 	return 1
 }
 
-//export VHProxyStop
-func VHProxyStop() {
+//export VH_ProxyStop
+func VH_ProxyStop() {
 	if curProxy == nil {
 		return
 	}
