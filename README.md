@@ -1,52 +1,72 @@
 # TLS proxy
 
-TLS proxy server for NMDC protocol. Currently supported by Verlihub 1.2.0.5 and later.
+TLS proxy server for NMDC protocol, written in Go, currently supported by Verlihub version `1.2.0.5` and later.
 
-## Generate self signed certificate
+As of Verlihub version `1.6.0.0` it is included in source code with ability to compile as built-in library using following option:
 
-`openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out "hub.crt" -keyout "hub.key"`
+`cmake -DUSE_TLS_PROXY=ON ..`
 
 ## Install Go
 
+Debian based distributions:
+
 `sudo apt install golang-go`
 
-## Compile proxy server
+Minimum required Go version is `1.13` - first version to support TLS `1.3` without hacks.
 
-```
-git clone https://github.com/verlihub/tls-proxy.git
-cd tls-proxy
-export CGO_ENABLED=0 && go build -ldflags "-libgcc=none" -tags netgo proxy.go
-```
+## Important to know
 
-## Start proxy server
+Remember to set twice the regular `ulimit` before starting both servers, because there will be twice as many connections than you would usually have.
 
-`./proxy --cert="/path/to/hub.crt" --key="/path/to/hub.key" --host="1.2.3.4:411" --hub="127.0.0.1:411"`
+Verlihub does that automatically when using `vh` command line utility.
 
-`1.2.3.4:411` is the proxy listening socket, the address that hub would normally be listening on. `127.0.0.1:411` is the hub listening socket, the address that accepts connections from the proxy. Add `&` at the end of command to run the process in background.
+## Common setup
 
-## Listen on multiple ports
+By default, to use TLS proxy you only need to change `tls_listen_port` from `0` to any local port, `tls_listen_ip` is already set to `127.0.0.1`, and restart your hub.
 
-`--host="1.2.3.4:411,1.2.3.4:1411"`
+To stop using TLS proxy, simply set back `tls_listen_port` to `0` and restart the hub.
 
-Host parameter takes a list of listening addresses separated by comma.
+`listen_ip`, `listen_port` and `extra_listen_ports` will be applied automatically either to hub without TLS proxy, or to proxy itself.
 
 ## Required TLS version
 
-By default TLS proxy requires TLS version `1.2` and higher, to change that use `--ver 0/1/2/3` where the parameter is minor version number.
+Note: By default TLS proxy requires TLS version `1.2` and higher, to change that use `tls_min_ver` variable, parameter is minor version number.
 
-## Configure the hub
+## Generating certificates
 
-`!set listen_ip 127.0.0.1`
+You can either generate or buy your own certificates, or let TLS proxy to generate self-signed certificates that are valid in `5` years.
 
-`!set tls_proxy_ip 127.0.0.1`
+## Configuration variables
 
-## Revert the configuration
+`listen_ip` - Listening address either for hub or proxy, default: `0.0.0.0`
 
-`!set listen_ip 1.2.3.4`
+`listen_port` - Main listen port either for hub or proxy, default: `4111`
 
-`!set tls_proxy_ip `
+`extra_listen_ports` - Extra listen ports either for hub or proxy separated by space, default: `<none>`
 
-Then start the hub as usual.
+`tls_listen_ip` - Local listening address for hub when proxy is enabled, default: `127.0.0.1`
+
+`tls_listen_port` - Local listening port for hub, `0` means proxy is disabled, default: `0`
+
+`tls_only_mode` - Allow only TLS-encrypted users to enter hub, default: `No`
+
+`not_tls_redirect` - Redirect address for users who are not TLS-encrypted, default: `<none>`
+
+`tls_detect_wait` - Protocol detection time in milliseconds, default: `600`
+
+`tls_cert_file` - Name of public certificate file in hub configuration directory, default: `hub.crt`
+
+`tls_key_file` - Name of private key file in hub configuration directory, default: `hub.key`
+
+`tls_cert_org` - Organisation name for self-signed certificate, default: `Verlihub`
+
+`tls_cert_host` - Hostname for self-signed ceritficate, default: `localhost`
+
+`tls_min_ver` - Minimum required TLS version, default: `2` - equals to `1.2`
+
+`tls_buf_size` - Proxy socket read buffer size in KB, default: `10`
+
+`tls_conn_log` - Enable TLS proxy logging, default: `No`
 
 ## Protocol specification
 
@@ -54,28 +74,5 @@ Following command is sent to the hub right after the connection is established:
 
 `$MyIP 2.3.4.5 1.0|`
 
-`2.3.4.5` is the real IP address of connected user. Second parameter stands for TLS version used by client, in case of non secure connection, `0.0` is passed to hub.
-
-## Important to know
-
-Remember to set twice the regular `ulimit` before starting both servers, because there will be twice as many connections than you would usually have.
-
-## Command line options
-
-`host` - Comma separated list of hosts to listen on
-
-`wait` - Time to wait to detect the protocol
-
-`hub` - Hub address to connect to
-
-`ip` - Send client IP
-
-`log` - Enable connection logging
-
-`cert` - TLS .crt file
-
-`key` - TLS .key file
-
-`ver` - Minimum required TLS version
-
-`buf` - Buffer size in KB
+`2.3.4.5` is the real IP address of connected user.
+Second parameter stands for TLS version used by client, in case of non secure connection, `0.0` is passed to hub.
