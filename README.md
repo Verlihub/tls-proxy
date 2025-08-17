@@ -40,9 +40,9 @@ You can either generate or buy your own certificates, or let TLS proxy to genera
 
 `listen_ip` - Listening address either for hub or proxy, default: `0.0.0.0`
 
-`listen_port` - Main listen port either for hub or proxy, default: `4111`
+`listen_port` - Main listening port either for hub or proxy, default: `4111`
 
-`extra_listen_ports` - Extra listen ports either for hub or proxy separated by space, default: `<none>`
+`extra_listen_ports` - Extra listening ports either for hub or proxy separated by space, default: `<none>`
 
 `tls_listen_ip` - Local listening address for hub when proxy is enabled, default: `127.0.0.1`
 
