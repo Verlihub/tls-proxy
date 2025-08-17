@@ -26,7 +26,7 @@ By default, to use TLS proxy you only need to change `tls_listen_port` from `0` 
 
 To stop using TLS proxy, simply set back `tls_listen_port` to `0` and restart the hub.
 
-`listen_ip`, `listen_port` and `extra_listen_ports` will be applied automatically either to hub without TLS proxy, or to proxy itself.
+`listen_ip`, `listen_port` and `extra_listen_ports` will be applied automatically either to externally listening hub without TLS proxy, or to proxy itself with locally listening hub.
 
 ## Required TLS version
 
