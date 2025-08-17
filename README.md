@@ -30,7 +30,7 @@ To stop using TLS proxy, simply set back `tls_listen_port` to `0` and restart th
 
 ## Required TLS version
 
-Note: By default TLS proxy requires TLS version `1.2` and higher, to change that use `tls_min_ver` variable, parameter is minor version number.
+By default TLS proxy requires TLS version `1.2` and higher, to change that use `tls_min_ver` variable, parameter is minor version number: `0` - `1.0`, `1` - `1.1`, `2` - `1.2`, `3` - `1.3`
 
 ## Generating certificates
 
