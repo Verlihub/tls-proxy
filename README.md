@@ -60,7 +60,7 @@ You can either generate or buy your own certificates, or let TLS proxy to genera
 
 `tls_cert_org` - Organisation name for self-signed certificate, default: `Verlihub`
 
-`tls_cert_host` - Hostname for self-signed ceritficate, default: `localhost`
+`tls_cert_host` - Hostname for self-signed certificate, default: `localhost`
 
 `tls_min_ver` - Minimum required TLS version, default: `2` - equals to `1.2`
 
