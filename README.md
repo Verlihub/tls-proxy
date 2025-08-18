@@ -28,6 +28,10 @@ To stop using TLS proxy, simply set back `tls_listen_port` to `0` and restart th
 
 `listen_ip`, `listen_port` and `extra_listen_ports` will be applied automatically either to externally listening hub without TLS proxy, or to proxy itself with locally listening hub.
 
+## Moving from command line
+
+If you were previously using command line version of TLS proxy, all you need to do is to change `listen_ip` from `127.0.0.1` to your external IP address, shut down command line server and restart your hub.
+
 ## Required TLS version
 
 By default TLS proxy requires TLS version `1.2` and higher, to change that use `tls_min_ver` variable, parameter is minor version number: `0` - `1.0`, `1` - `1.1`, `2` - `1.2`, `3` - `1.3`
