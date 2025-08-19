@@ -70,7 +70,7 @@ You can either generate or buy your own certificates, or let TLS proxy to genera
 
 `tls_buf_size` - Proxy socket read buffer size in KB, default: `10`
 
-`tls_conn_log` - Enable TLS proxy logging, default: `No`
+`tls_err_log` - Enable TLS proxy error logging to standard output, default: `No`
 
 ## Protocol specification
 
