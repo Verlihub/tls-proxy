@@ -72,6 +72,44 @@ You can either generate or buy your own certificates, or let TLS proxy to genera
 
 `tls_err_log` - Enable TLS proxy error logging to standard output, default: `No`
 
+## Old style command
+
+In case you don't use our TLS proxy with Verlihub, or want to keep using old style stand alone command line version, you can compile the `cmd/proxy.go`:
+
+```
+git clone https://github.com/verlihub/tls-proxy.git
+cd tls-proxy
+go build cmd/proxy.go
+```
+
+These are the command line start options:
+
+`host` - Space separated list of hosts to listen on
+
+`wait` - Time to wait to detect the protocol
+
+`hub` - Hub address to connect to
+
+`net` - Network type: `tcp4`, `tcp6`, `tcp`, `unix`
+
+`ip` - Send client IP: `1`/`0`
+
+`log` - Enable error logging: `1`/`0`
+
+`cert` - Public .crt file: `hub.crt`
+
+`key` - Private .key file: `hub.key`
+
+`cert-org` - Certificate organisation
+
+`cert-mail` - Certificate email
+
+`cert-host` - Certificate hostname
+
+`ver` - Minimum required TLS version: `0` - `1.0`, `1` - `1.1`, `2` - `1.2`, `3` - `1.3`
+
+`buf` - Buffer size in KB
+
 ## Protocol specification
 
 Following command is sent to the hub right after the connection is established:
