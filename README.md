@@ -79,7 +79,7 @@ In case you don't use our TLS proxy with Verlihub, or want to keep using old sty
 ```
 git clone https://github.com/verlihub/tls-proxy.git
 cd tls-proxy
-go build cmd/proxy.go
+go build ./cmd/proxy.go
 ```
 
 These are the command line start options:
