@@ -56,7 +56,7 @@ You can either generate or buy your own certificates, or let TLS proxy to genera
 
 `not_tls_redirect` - Redirect address for users who are not TLS-encrypted, default: `<none>`
 
-`tls_detect_wait` - Protocol detection time in milliseconds, default: `600`
+`tls_detect_wait` - Protocol detection time in milliseconds, default: `500`
 
 `tls_cert_file` - Name of public certificate file in hub configuration directory, default: `hub.crt`
 
